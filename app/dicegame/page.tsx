@@ -1,6 +1,10 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { Ghost, Zap } from "lucide-react";
+import kohli from '../characters/kohli.png';
+import messi from '../characters/messi.png';
+import batman from '../characters/batman.png';
+import Image from "next/image";
 
 export default function FlowingPathBall() {
     const [isAnimating, setIsAnimating] = useState(false);
@@ -9,6 +13,8 @@ export default function FlowingPathBall() {
     const [gameOver, setGameOver] = useState(false);
     const [shadowPosition, setShadowPosition] = useState({ x: 0, y: 0 });
     const [showEffect, setShowEffect] = useState(null);
+    const [selectedCharacter, setSelectedCharacter] = useState(null);
+    const [showCharacterSelect, setShowCharacterSelect] = useState(true);
     const pathRef = useRef(null);
     const animationRef = useRef(null);
     const [pathLength, setPathLength] = useState(0);
@@ -227,6 +233,11 @@ export default function FlowingPathBall() {
         animateToPosition(newProgress, diceRoll);
     };
 
+    const handleCharacterSelect = (character) => {
+        setSelectedCharacter(character);
+        setShowCharacterSelect(false);
+    };
+
     const handleExit = () => {
         if (animationRef.current) {
             cancelAnimationFrame(animationRef.current);
@@ -235,6 +246,8 @@ export default function FlowingPathBall() {
         setCurrentProgress(0);
         setGameOver(false);
         setShowEffect(null);
+        setShowCharacterSelect(true);
+        setSelectedCharacter(null);
         const initialPosition = getPointAtLength(0);
         setBallPosition(initialPosition);
         setShadowPosition(initialPosition);
@@ -287,6 +300,66 @@ export default function FlowingPathBall() {
 
     return (
         <div className="w-full h-screen bg-black flex flex-col overflow-hidden">
+            {/* Character Selection Overlay */}
+            {showCharacterSelect && (
+                <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+                    <div className="bg-gray-900 relative p-8 rounded-lg border max-w-4xl flex flex-col items-center justify-center gap-8">
+                        <h2 className="text-3xl font-bold text-white text-center">
+                            Choose Your Character
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {/* Kohli */}
+                            <div
+                                className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform duration-200"
+                                onClick={() => handleCharacterSelect('kohli')}
+                            >
+                                <div className="w-32 h-32 rounded-full overflow-hidden bg-black transition-colors">
+                                    <Image
+                                        src={kohli}
+                                        alt="Virat Kohli"
+                                    />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mt-4">Virat Kohli</h3>
+                                <p className="text-gray-400 text-center">The King of Cricket</p>
+                            </div>
+
+                            {/* Messi */}
+                            <div
+                                className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform duration-200"
+                                onClick={() => handleCharacterSelect('messi')}
+                            >
+                                <div className="w-32 h-32 rounded-full overflow-hidden bg-black transition-colors">
+                                    <Image
+                                        src={messi}
+                                        alt="Lionel Messi"
+                                    />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mt-4">Lionel Messi</h3>
+                                <p className="text-gray-400 text-center">The GOAT of Football</p>
+                            </div>
+
+                            {/* Batman */}
+                            <div
+                                className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform duration-200"
+                                onClick={() => handleCharacterSelect('batman')}
+                            >
+                                <div className="w-32 h-32 bg-black rounded-full overflow-hidden transition-colors">
+                                    <Image
+                                        src={batman}
+                                        alt="Batman"
+                                    />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mt-4">Batman</h3>
+                                <p className="text-gray-400 text-center">The Dark Knight</p>
+                            </div>
+                        </div>
+                        <button className="absolute top-0 right-0 bg-white text-black px-2 py-1 rounded-tr-md rounded-bl-md" onClick={() => setShowCharacterSelect(false)}>
+                            x
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Game Status Bar */}
             <div className="bg-gray-900 border-b border-green-600 p-3 sm:p-4">
                 <div className="max-w-4xl mx-auto flex justify-between items-center text-white">
@@ -419,7 +492,7 @@ export default function FlowingPathBall() {
                             x={pathWidth - 50}
                             y="25"
                             textAnchor="middle"
-                            fill="#22C55E"
+                            fill="RED"
                             fontSize="12"
                             fontWeight="bold"
                         >
@@ -494,22 +567,30 @@ export default function FlowingPathBall() {
                             />
                         )}
 
-                        {/* The ball */}
-                        <circle
-                            cx={ballPosition.x}
-                            cy={ballPosition.y}
-                            r={ballSize}
-                            fill="url(#ballGradient)"
-                        // stroke="white"
-                        // strokeWidth="2"
-                        >
-                            <animate
-                                attributeName="opacity"
-                                values="0.9;1;0.9"
-                                dur="1s"
-                                repeatCount="indefinite"
+                        {/* The ball/character */}
+                        {selectedCharacter ? (
+                            <image
+                                href={selectedCharacter === 'kohli' ? kohli.src : selectedCharacter === 'messi' ? messi.src : batman.src}
+                                x={ballPosition.x - (ballSize * 3)}
+                                y={ballPosition.y - (ballSize * 3)}
+                                width={ballSize * 6}
+                                height={ballSize * 6}
                             />
-                        </circle>
+                        ) : (
+                            <circle
+                                cx={ballPosition.x}
+                                cy={ballPosition.y}
+                                r={ballSize}
+                                fill="url(#ballGradient)"
+                            >
+                                <animate
+                                    attributeName="opacity"
+                                    values="0.9;1;0.9"
+                                    dur="1s"
+                                    repeatCount="indefinite"
+                                />
+                            </circle>
+                        )}
                     </svg>
 
                     {/* Effect animations overlay */}
