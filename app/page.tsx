@@ -49,6 +49,11 @@ export default function Home() {
                   Coin Flip
                 </div>
               </Link>
+              <Link href="/dicegame" className="w-full md:w-[200px]">
+                <div className="w-full md:w-[200px] py-3 font-funnel-sans text-gray-900 border border-gray-200 hover:border-gray-400 transition-colors text-center">
+                  Dice Game
+                </div>
+              </Link>
             </div>
           </div>
         </div>
