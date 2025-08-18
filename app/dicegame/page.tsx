@@ -76,7 +76,7 @@ export default function FlowingPathBall() {
         setShowEffect({ type, message });
         setTimeout(() => {
             setShowEffect(null);
-        }, 1500);
+        }, 2500); // Increased from 1500 to 2500 for longer visibility
     };
 
     // Two-phase animation: shadow first, then ball
@@ -156,18 +156,20 @@ export default function FlowingPathBall() {
         const checkpoint = checkpoints[roundedPos];
 
         if (checkpoint) {
+            // Show effect animation first
+            showEffectAnimation(checkpoint.type, checkpoint.message);
+
+            // Apply effect after showing animation - but don't animate backwards
             setTimeout(() => {
-                showEffectAnimation(checkpoint.type, checkpoint.message);
+                const newProgress = Math.max(
+                    0,
+                    Math.min(100, currentProgress + checkpoint.value)
+                );
 
-                // Apply effect after showing animation
-                setTimeout(() => {
-                    const newProgress = Math.max(
-                        0,
-                        Math.min(100, currentProgress + checkpoint.value)
-                    );
-
-                    // Animate to new position
-                    const effectDuration = 600;
+                // Only animate if moving forward, otherwise just update position
+                if (newProgress > currentProgress) {
+                    // Animate to new position smoothly
+                    const effectDuration = 800;
                     const startTime = Date.now();
                     const startPos = currentProgress;
                     const posDiff = newProgress - startPos;
@@ -195,8 +197,18 @@ export default function FlowingPathBall() {
                     };
 
                     animateEffect();
-                }, 800);
-            }, 300);
+                } else {
+                    // For negative effects, just update position without animation
+                    setCurrentProgress(newProgress);
+                    const position = getPointAtLength(newProgress);
+                    setBallPosition(position);
+                    setIsAnimating(false);
+
+                    if (newProgress >= 100) {
+                        setGameOver(true);
+                    }
+                }
+            }, 1200); // Increased delay for better effect visibility
         } else {
             setIsAnimating(false);
             if (currentPos >= 100) {
@@ -446,7 +458,7 @@ export default function FlowingPathBall() {
                                         cx={pos.x}
                                         cy={pos.y}
                                         r="18"
-                                        stroke="white"
+                                        // stroke="white"
                                         fill={effect.type === "boost" ? "url(#boostGradient)" : "url(#ghostGradient)"}
                                         fillOpacity="0.8"
                                         // display={currentProgress >= parseInt(checkpoint) ? "none" : "block"}
