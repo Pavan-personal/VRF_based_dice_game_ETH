@@ -2,8 +2,8 @@
 import React, { useState, useCallback } from 'react';
 import Image from "next/image";
 import { Randomness } from 'randomness-js'
-import { ethers, getBytes, Contract } from 'ethers'
-import { useAccount, useReadContract, useWriteContract, useConfig } from 'wagmi';
+import { ethers, getBytes } from 'ethers'
+import { useAccount, useWriteContract, useConfig } from 'wagmi';
 import { CONTRACT_ABI, CONTRACT_ADDRESS } from '@/app/config';
 import { waitForTransactionReceipt } from "@wagmi/core";
 import Header from './header';
@@ -17,11 +17,11 @@ export default function CoinFlip() {
     const [isProcessing, setIsProcessing] = useState(false);
 
     // Read function that doesn't need args
-    const { data: readData } = useReadContract({
-        address: CONTRACT_ADDRESS,
-        abi: CONTRACT_ABI,
-        functionName: 'randomness',
-    }) as { data: bigint | undefined };
+    // const { data: readData } = useReadContract({
+    //     address: CONTRACT_ADDRESS,
+    //     abi: CONTRACT_ABI,
+    //     functionName: 'randomness',
+    // }) as { data: bigint | undefined };
 
     // Write function setup
     const { writeContract } = useWriteContract();
