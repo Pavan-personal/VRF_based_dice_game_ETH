@@ -9,6 +9,7 @@ import { waitForTransactionReceipt } from "@wagmi/core";
 import kohli from '../characters/kohli.png';
 import messi from '../characters/messi.png';
 import batman from '../characters/batman.png';
+
 import Image from "next/image";
 import Header from "./header";
 import Wallet from "../wallet";
@@ -24,36 +25,21 @@ export default function FlowingPathBall() {
     const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
     const [showCharacterSelect, setShowCharacterSelect] = useState(true);
     const [isRolling, setIsRolling] = useState(false);
-    // const [diceValue, setDiceValue] = useState(1);
     const [isDarkMode, setIsDarkMode] = useState(true);
     const pathRef = useRef<SVGSVGElement | null>(null);
     const animationRef = useRef<number | null>(null);
-    // const [pathLength, setPathLength] = useState(0);
-
-    // VRF Integration
     const [vrfResult, setVrfResult] = useState<number | null>(null);
     const [vrfError, setVrfError] = useState<string | null>(null);
     const [isVrfProcessing, setIsVrfProcessing] = useState(false);
-
-    // Read function that doesn't need args
-    // const { data: readData } = useReadContract({
-    //     address: CONTRACT_ADDRESS,
-    //     abi: CONTRACT_ABI,
-    //     functionName: 'randomness',
-    // }) as { data: bigint | undefined };
-
-    // Write function setup
     const { writeContract } = useWriteContract();
     const config = useConfig();
 
-    // Game settings - reduced complexity for 4 peaks
     const pathComplexity = 6;
     const curveAmplitude = 70;
     const pathWidth = 800;
     const pathHeight = 400;
     const ballSize = 16;
 
-    // Checkpoints with exact matching
     const checkpoints = {
         20: { type: "boost", value: 8, message: "+8%" },
         35: { type: "ghost", value: -6, message: "-6%" },
@@ -96,7 +82,6 @@ export default function FlowingPathBall() {
     const getPointAtLength = (percentage: number) => {
         if (!pathRef.current) return { x: 0, y: 0 };
 
-        // Handle starting position (0%)
         if (percentage === 0) {
             return { x: 50, y: pathHeight - 50 };
         }
@@ -109,23 +94,19 @@ export default function FlowingPathBall() {
         return { x: point.x, y: point.y };
     };
 
-    // Show effect animation
     const showEffectAnimation = (type: string, message: string) => {
         setShowEffect({ type, message });
         setTimeout(() => {
             setShowEffect(null);
-        }, 2500); // Increased from 1500 to 2500 for longer visibility
+        }, 2500);
     };
 
-    // Two-phase animation: shadow first, then ball
     const animateToPosition = (targetProgress: number, diceRoll: number) => {
-        // Phase 1: Show shadow moving to target
-        const shadowDuration = 600;
+        const shadowDuration = 200;
         const startTime = Date.now();
         const startProgress = currentProgress;
         const progressDiff = targetProgress - startProgress;
 
-        // Animate shadow first
         const animateShadow = () => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / shadowDuration, 1);
@@ -140,24 +121,21 @@ export default function FlowingPathBall() {
             if (progress < 1) {
                 animationRef.current = requestAnimationFrame(animateShadow);
             } else {
-                // Phase 2: Move ball to shadow position
                 setTimeout(() => {
                     animateBall(targetProgress, diceRoll);
-                }, 150);
+                }, 50);
             }
         };
 
         animateShadow();
     };
 
-    // Ball follows shadow
     const animateBall = (targetProgress: number, diceRoll: number) => {
-        const duration = 800;
+        const duration = 300;
         const startTime = Date.now();
         const startProgress = currentProgress;
         const progressDiff = targetProgress - startProgress;
 
-        // Show dice roll effect
         showEffectAnimation("dice", `+${diceRoll}%`);
 
         const animate = () => {
@@ -173,13 +151,13 @@ export default function FlowingPathBall() {
             const easedProgress = easeInOutCubic(progress);
             const newProgress = startProgress + progressDiff * easedProgress;
             const position = getPointAtLength(newProgress);
+
             setBallPosition(position);
             setCurrentProgress(newProgress);
 
             if (progress < 1) {
                 animationRef.current = requestAnimationFrame(animate);
             } else {
-                // Check for checkpoint effects EXACTLY
                 checkForSpecialEffects(Math.round(newProgress));
             }
         };
@@ -187,28 +165,23 @@ export default function FlowingPathBall() {
         animate();
     };
 
-    // Check for special effects at checkpoints - EXACT match only
     const checkForSpecialEffects = (currentPos: number) => {
         const roundedPos = Math.round(currentPos);
         const checkpoint = checkpoints[roundedPos as keyof typeof checkpoints];
 
         if (checkpoint) {
-            // Show effect animation first
             showEffectAnimation(checkpoint.type, checkpoint.message);
 
-            // Apply effect after showing animation - but don't animate backwards
             setTimeout(() => {
                 const newProgress = Math.max(
                     0,
-                    Math.min(100, currentProgress + checkpoint.value)
+                    Math.min(100, currentPos + checkpoint.value)
                 );
 
-                // Only animate if moving forward, otherwise just update position
-                if (newProgress > currentProgress) {
-                    // Animate to new position smoothly
-                    const effectDuration = 800;
+                if (newProgress > currentPos) {
+                    const effectDuration = 400;
                     const startTime = Date.now();
-                    const startPos = currentProgress;
+                    const startPos = currentPos;
                     const posDiff = newProgress - startPos;
 
                     const animateEffect = () => {
@@ -235,7 +208,6 @@ export default function FlowingPathBall() {
 
                     animateEffect();
                 } else {
-                    // For negative effects, just update position without animation
                     setCurrentProgress(newProgress);
                     const position = getPointAtLength(newProgress);
                     setBallPosition(position);
@@ -245,7 +217,7 @@ export default function FlowingPathBall() {
                         setGameOver(true);
                     }
                 }
-            }, 1200); // Increased delay for better effect visibility
+            }, 600);
         } else {
             setIsAnimating(false);
             if (currentPos >= 100) {
@@ -255,10 +227,11 @@ export default function FlowingPathBall() {
     };
 
     const rollDice = async () => {
-        if (isAnimating || gameOver || isVrfProcessing) return;
+        if (isAnimating || gameOver || isVrfProcessing || isRolling) return;
 
         try {
             setIsRolling(true);
+            setIsVrfProcessing(true);
             setVrfError(null);
             setVrfResult(null);
 
@@ -266,9 +239,15 @@ export default function FlowingPathBall() {
             const jsonProvider = new ethers.JsonRpcProvider(`https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_KEY}`);
 
             const randomness = Randomness.createBaseSepolia(jsonProvider);
-            console.log("Randomness instance:", randomness);
-
             const [requestCallBackPrice] = await randomness.calculateRequestPriceNative(BigInt(callbackGasLimit));
+
+            const timeoutId = setTimeout(() => {
+                const fallbackDiceRoll = Math.floor(Math.random() * 6) + 1;
+                setVrfResult(fallbackDiceRoll);
+                setIsRolling(false);
+                setIsVrfProcessing(false);
+                handleRoll(fallbackDiceRoll);
+            }, 30000);
 
             writeContract({
                 address: CONTRACT_ADDRESS,
@@ -277,20 +256,33 @@ export default function FlowingPathBall() {
                 args: [callbackGasLimit],
                 value: requestCallBackPrice,
             }, {
-                onSuccess: handleVrfTransactionSubmitted,
+                onSuccess: (txHash: string) => {
+                    clearTimeout(timeoutId);
+                    handleVrfTransactionSubmitted(txHash);
+                },
+                onError: (error: Error) => {
+                    console.log(error);
+                    clearTimeout(timeoutId);
+                    setVrfError("VRF request failed. Please try again.");
+                    setIsRolling(false);
+                    setIsVrfProcessing(false);
+                }
             });
-
-        } catch (error) {
-            console.error('VRF request failed:', error);
+        } catch {
             setVrfError('Failed to request VRF. Please try again.');
             setIsRolling(false);
+            setIsVrfProcessing(false);
         }
     };
 
     const handleRoll = (diceRoll: number) => {
-        if (isAnimating || gameOver) return;
+        if (isAnimating || gameOver) {
+            return;
+        }
 
         const newProgress = Math.min(currentProgress + diceRoll, 100);
+        const currentPos = getPointAtLength(currentProgress);
+        setBallPosition(currentPos);
 
         setIsAnimating(true);
         animateToPosition(newProgress, diceRoll);
@@ -301,31 +293,7 @@ export default function FlowingPathBall() {
         setShowCharacterSelect(false);
     };
 
-    // const handleExit = () => {
-    //     if (animationRef.current) {
-    //         cancelAnimationFrame(animationRef.current);
-    //     }
-    //     setIsAnimating(false);
-    //     setCurrentProgress(0);
-    //     setGameOver(false);
-    //     setShowEffect(null);
-    //     setShowCharacterSelect(true);
-    //     setSelectedCharacter(null);
-    //     const initialPosition = getPointAtLength(0);
-    //     setBallPosition(initialPosition);
-    //     setShadowPosition(initialPosition);
-    // };
-
-    // useEffect(() => {
-    //     if (pathRef.current) {
-    //         const length = (pathRef.current as unknown as SVGPathElement).getTotalLength();
-    //         setPathLength(length);
-    //     }
-    // }, [pathData]);
-
-    // Set initial ball and shadow position
     useEffect(() => {
-        // Use exact START point coordinates
         const startX = 50;
         const startY = pathHeight - 50;
         const startPosition = { x: startX, y: startY };
@@ -333,7 +301,6 @@ export default function FlowingPathBall() {
         setShadowPosition(startPosition);
     }, [pathHeight]);
 
-    // Generate smooth progress path that follows the curve
     const generateSmoothProgressPath = () => {
         if (!pathRef.current || currentProgress === 0) return "";
 
@@ -341,9 +308,8 @@ export default function FlowingPathBall() {
         const totalLength = pathElement.getTotalLength();
         const targetLength = totalLength * (currentProgress / 100);
 
-        // Create a smooth path up to current progress
         let progressPath = "";
-        const segmentCount = 100; // More segments for smoother curve
+        const segmentCount = 100;
 
         for (let i = 0; i <= segmentCount; i++) {
             const progress = i / segmentCount;
@@ -365,74 +331,89 @@ export default function FlowingPathBall() {
 
     const smoothProgressPath = generateSmoothProgressPath();
 
-    // VRF Transaction Handler
     const handleVrfTransactionSubmitted = useCallback(async (txHash: string) => {
         try {
             setIsVrfProcessing(true);
+
             const transactionReceipt = await waitForTransactionReceipt(config, {
                 hash: txHash as `0x${string}`,
             });
 
             if (transactionReceipt.status === "success") {
-                // Wait a bit for the randomness to be updated
-                setTimeout(async () => {
-                    // Read the updated randomness directly from contract
+                let attempts = 0;
+                const maxAttempts = 10;
+                const checkRandomness = async () => {
+                    attempts++;
+
                     try {
                         const provider = new ethers.JsonRpcProvider(`https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_KEY}`);
                         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
                         const updatedRandomness = await contract.randomness();
 
-                        if (updatedRandomness) {
+                        if (updatedRandomness && updatedRandomness.toString() !== "0") {
                             const bytes = getBytes(updatedRandomness.toString());
-                            console.log("Updated VRF randomness:", updatedRandomness);
 
                             if (bytes.length > 0) {
-                                // Convert VRF result to dice roll (1-6)
                                 const diceRoll = (bytes[0] % 6) + 1;
-                                setVrfResult(diceRoll);
-                                // setDiceValue(diceRoll);
-                                setIsRolling(false);
 
-                                // Start the game with the VRF result
-                                handleRoll(diceRoll);
-                            } else {
-                                setVrfError("Failed to generate random dice roll. Please try again.");
+                                setVrfResult(diceRoll);
                                 setIsRolling(false);
+                                setIsVrfProcessing(false);
+                                setIsAnimating(false);
+
+                                setTimeout(() => {
+                                    handleRoll(diceRoll);
+                                }, 50);
+
+                                return;
                             }
-                        } else {
-                            setVrfError("Failed to get random dice roll. Please try again.");
-                            setIsRolling(false);
                         }
-                    } catch (readError) {
-                        console.error("Error reading VRF randomness:", readError);
-                        setVrfError("Failed to read random dice roll. Please try again.");
-                        setIsRolling(false);
+
+                        if (attempts < maxAttempts) {
+                            setTimeout(checkRandomness, 2000);
+                        } else {
+                            setVrfError("VRF callback failed. Please try again.");
+                            setIsRolling(false);
+                            setIsVrfProcessing(false);
+                            setIsAnimating(false);
+                        }
+
+                    } catch {
+                        if (attempts < maxAttempts) {
+                            setTimeout(checkRandomness, 2000);
+                        } else {
+                            setVrfError("Failed to read random dice roll. Please try again.");
+                            setIsRolling(false);
+                            setIsVrfProcessing(false);
+                            setIsAnimating(false);
+                        }
                     }
-                    setIsVrfProcessing(false);
-                }, 2000); // Wait 2 seconds for randomness to be updated
+                };
+
+                setTimeout(checkRandomness, 2000);
+
             } else {
                 setVrfError("VRF transaction failed. Please try again.");
                 setIsRolling(false);
                 setIsVrfProcessing(false);
+                setIsAnimating(false);
             }
-        } catch (error) {
-            console.error("Error in VRF transaction:", error);
+        } catch{
             setVrfError("VRF transaction failed. Please try again.");
             setIsRolling(false);
             setIsVrfProcessing(false);
+            setIsAnimating(false);
         }
-    }, [config]);
+    }, [config, handleRoll]);
 
     return (
         <>
             {isConnected ? (
                 <div className={`w-full h-screen flex flex-col overflow-hidden ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'}`}>
-                    {/* Header - Fixed at top */}
                     <div className="flex-shrink-0 z-40">
                         <Header darkMode={isDarkMode} />
                     </div>
 
-                    {/* Dark/Light Mode Toggle - Fixed at top right */}
                     <button
                         onClick={() => setIsDarkMode(!isDarkMode)}
                         className={`absolute top-4 right-4 z-50 p-2 rounded-full transition-all duration-200 ${isDarkMode
@@ -443,7 +424,6 @@ export default function FlowingPathBall() {
                         {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
                     </button>
 
-                    {/* Character Selection Overlay */}
                     {showCharacterSelect && (
                         <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
                             <div className={`relative p-8 rounded-lg border-2 max-w-4xl flex flex-col items-center justify-center gap-8 ${isDarkMode ? 'bg-gray-900' : 'bg-white'
@@ -453,7 +433,6 @@ export default function FlowingPathBall() {
                                     Choose Your Character
                                 </h2>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    {/* Kohli */}
                                     <div
                                         className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform duration-200"
                                         onClick={() => handleCharacterSelect('kohli')}
@@ -470,7 +449,6 @@ export default function FlowingPathBall() {
                                             }`}>The King of Cricket</p>
                                     </div>
 
-                                    {/* Messi */}
                                     <div
                                         className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform duration-200"
                                         onClick={() => handleCharacterSelect('messi')}
@@ -487,7 +465,6 @@ export default function FlowingPathBall() {
                                             }`}>The GOAT of Football</p>
                                     </div>
 
-                                    {/* Batman */}
                                     <div
                                         className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform duration-200"
                                         onClick={() => handleCharacterSelect('batman')}
@@ -515,7 +492,6 @@ export default function FlowingPathBall() {
                         </div>
                     )}
 
-                    {/* Main Game Area - Flexible height */}
                     <div className="flex-1 flex items-center justify-center relative overflow-hidden">
                         <div className="w-full h-full max-w-6xl relative">
                             <svg
@@ -556,14 +532,12 @@ export default function FlowingPathBall() {
                                         <stop offset="100%" stopColor="#1E40AF" />
                                     </radialGradient>
 
-                                    {/* boost gradient */}
                                     <radialGradient id="boostGradient" cx="30%" cy="30%">
                                         <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
                                         <stop offset="70%" stopColor="#16A34A" />
                                         <stop offset="100%" stopColor="#15803D" />
                                     </radialGradient>
 
-                                    {/* ghost gradient */}
                                     <radialGradient id="ghostGradient" cx="30%" cy="30%">
                                         <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
                                         <stop offset="70%" stopColor="#B91C1C" />
@@ -576,7 +550,6 @@ export default function FlowingPathBall() {
                                     </radialGradient>
                                 </defs>
 
-                                {/* Start point */}
                                 <circle
                                     cx="50"
                                     cy={pathHeight - 50}
@@ -602,7 +575,6 @@ export default function FlowingPathBall() {
                                     START
                                 </text>
 
-                                {/* End point */}
                                 <circle
                                     cx={pathWidth - 50}
                                     cy="50"
@@ -628,7 +600,6 @@ export default function FlowingPathBall() {
                                     END
                                 </text>
 
-                                {/* The main path - wider */}
                                 <path
                                     ref={pathRef as unknown as React.RefObject<SVGPathElement> | undefined}
                                     d={pathData}
@@ -639,7 +610,6 @@ export default function FlowingPathBall() {
                                     strokeLinejoin="round"
                                 />
 
-                                {/* Progress path - using small line segments to follow the curve */}
                                 {smoothProgressPath && (
                                     <path
                                         d={smoothProgressPath}
@@ -650,7 +620,6 @@ export default function FlowingPathBall() {
                                     />
                                 )}
 
-                                {/* Checkpoints - high z-index */}
                                 {Object.keys(checkpoints).map((checkpoint) => {
                                     const checkpointNum = Number(checkpoint) as keyof typeof checkpoints;
                                     const pos = getPointAtLength(Number(checkpoint));
@@ -661,13 +630,10 @@ export default function FlowingPathBall() {
                                                 cx={pos.x}
                                                 cy={pos.y}
                                                 r="18"
-                                                // stroke="white"
                                                 fill={effect.type === "boost" ? "url(#boostGradient)" : "url(#ghostGradient)"}
                                                 fillOpacity="0.8"
-                                                // display={currentProgress >= parseInt(checkpoint) ? "none" : "block"}
                                                 className={`${currentProgress >= parseInt(checkpoint) ? "opacity-0" : "opacity-100"}`}
                                             >
-                                                {/* <animate attributeName="r" values="18;22;18" dur="2s" repeatCount="indefinite" /> */}
                                             </circle>
 
                                             <text
@@ -677,7 +643,6 @@ export default function FlowingPathBall() {
                                                 fill={effect.type === "boost" ? "#22C55E" : "#DC2626"}
                                                 fontSize="10"
                                                 fontWeight="bold"
-                                                // display={currentProgress >= parseInt(checkpoint) ? "none" : "block"}
                                                 className={`${currentProgress >= parseInt(checkpoint) ? "opacity-0" : "opacity-100"}`}
                                             >
                                                 {effect.message}
@@ -686,7 +651,6 @@ export default function FlowingPathBall() {
                                     );
                                 })}
 
-                                {/* Shadow (target position) */}
                                 {isAnimating && (
                                     <circle
                                         cx={shadowPosition.x}
@@ -697,7 +661,6 @@ export default function FlowingPathBall() {
                                     />
                                 )}
 
-                                {/* The ball/character */}
                                 {selectedCharacter ? (
                                     <image
                                         href={selectedCharacter === 'kohli' ? kohli.src : selectedCharacter === 'messi' ? messi.src : batman.src}
@@ -723,7 +686,6 @@ export default function FlowingPathBall() {
                                 )}
                             </svg>
 
-                            {/* Effect animations overlay */}
                             {showEffect && (
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <div
@@ -748,7 +710,6 @@ export default function FlowingPathBall() {
                                 </div>
                             )}
 
-                            {/* Win Celebration Message */}
                             {gameOver && (
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40 bg-slate-900 bg-opacity-70">
                                     <div
@@ -766,11 +727,9 @@ export default function FlowingPathBall() {
                         </div>
                     </div>
 
-                    {/* Footer - Fixed at bottom */}
                     <div className={`flex-shrink-0 border-t p-4 px-6 ${isDarkMode ? 'border-green-600' : 'bg-gray-100 border-green-600'
                         }`}>
                         <div className="flex justify-between items-center mx-auto">
-                            {/* Game Status Row */}
                             <div className="flex flex-col justify-between items-start">
                                 <div className="text-sm sm:text-lg font-bold">
                                     Progress:{" "}
@@ -795,7 +754,6 @@ export default function FlowingPathBall() {
                                 )}
                             </div>
 
-                            {/* Action Buttons Row */}
                             <div className="flex justify-center gap-4 sm:gap-8">
                                 <div className="relative group">
                                     <button
@@ -813,17 +771,15 @@ export default function FlowingPathBall() {
                                         ) : gameOver ? "Game Over" : "Roll Dice"}
                                     </button>
 
-                                    {/* VRF Error Display */}
                                     {vrfError && (
                                         <div className="mt-2 text-red-500 text-sm text-center">
                                             {vrfError}
                                         </div>
                                     )}
 
-                                    {/* VRF Result Display */}
                                     {vrfResult && (
                                         <div className="mt-2 text-green-500 text-sm text-center">
-                                            VRF Result: {vrfResult}
+                                            Dice Roll: {vrfResult}
                                         </div>
                                     )}
                                 </div>
@@ -832,45 +788,45 @@ export default function FlowingPathBall() {
                     </div>
 
                     <style jsx>{`
-          @keyframes effectShow {
-            0% {
-              opacity: 0;
-              transform: scale(0.5);
-            }
-            50% {
-              opacity: 1;
-              transform: scale(1.2);
-            }
-            100% {
-              opacity: 0;
-              transform: scale(1.2);
-            }
-          }
+                        @keyframes effectShow {
+                            0% {
+                                opacity: 0;
+                                transform: scale(0.5);
+                            }
+                            50% {
+                                opacity: 1;
+                                transform: scale(1.2);
+                            }
+                            100% {
+                                opacity: 0;
+                                transform: scale(1.2);
+                            }
+                        }
 
-          @keyframes winCelebration {
-            0% {
-              opacity: 0;
-              transform: scale(0.3) rotate(-10deg);
-            }
-            20% {
-              opacity: 1;
-              transform: scale(1.1) rotate(5deg);
-            }
-            40% {
-              transform: scale(1.2) rotate(-3deg);
-            }
-            60% {
-              transform: scale(1.1) rotate(2deg);
-            }
-            80% {
-              transform: scale(1.2) rotate(-1deg);
-            }
-            100% {
-              opacity: 1;
-              transform: scale(1.2) rotate(0deg);
-            }
-          }
-        `}</style>
+                        @keyframes winCelebration {
+                            0% {
+                                opacity: 0;
+                                transform: scale(0.3) rotate(-10deg);
+                            }
+                            20% {
+                                opacity: 1;
+                                transform: scale(1.1) rotate(5deg);
+                            }
+                            40% {
+                                transform: scale(1.2) rotate(-3deg);
+                            }
+                            60% {
+                                transform: scale(1.1) rotate(2deg);
+                            }
+                            80% {
+                                transform: scale(1.2) rotate(-1deg);
+                            }
+                            100% {
+                                opacity: 1;
+                                transform: scale(1.2) rotate(0deg);
+                            }
+                        }
+                    `}</style>
                 </div>
             ) : (
                 <Wallet />

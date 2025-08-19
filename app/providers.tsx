@@ -23,9 +23,8 @@ const queryClient = new QueryClient();
 const config = getDefaultConfig({
     appName: 'Snakes & Ladders',
     projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID!,
-    // eslint-disable-next-line  @typescript-eslint/no-explicit-any
     chains: [baseSepolia, sepolia, mainnet],
-    ssr: true, // If your dApp uses server side rendering (SSR),
+    ssr: true,
     transports: {
         [baseSepolia.id]: http(`https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_KEY}`),
         [sepolia.id]: http(`https://sepolia.drpc.org`),

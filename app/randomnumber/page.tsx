@@ -128,7 +128,7 @@ export default function RandomNumber() {
         return () => {
             if (intervalId) clearInterval(intervalId);
         };
-    }, [isTransactionSuccess, refetchReadData, initialAnimation, readData]);
+    }, [isTransactionSuccess, refetchReadData, initialAnimation, readData, loading]);
 
     useEffect(() => {
         if (isTransactionSuccess) {
