@@ -17,7 +17,7 @@
     "@tanstack/react-query": "^5.53.1",
     "ethers": "^6.13.2",
     "lucide-react": "^0.479.0",
-    "next": "15.3.0",
+    "next": "15.3.6",
     "pino-pretty": "^11.2.2",
     "randomness-js": "^1.0.2",
     "randomness-solidity": "^0.0.6",
